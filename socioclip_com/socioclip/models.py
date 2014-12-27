@@ -23,12 +23,13 @@ class DjangoMigrations(models.Model):
 
 
 class SocioclipBookmarkTags(models.Model):
+    id = models.BigIntegerField(primary_key=True)
     bookmark = models.ForeignKey('SocioclipBookmarks')
     tag = models.ForeignKey('SocioclipTags')
     tag_date = models.DateField()
 
     def __unicode__(self):
-        return u'%s %s' % (self.bookmark,self.tag)
+        return u'%s %s' % (self.bookmark,self.tag)    
 
     class Meta:
         managed = False
@@ -38,7 +39,7 @@ class SocioclipBookmarkTags(models.Model):
 
 class SocioclipBookmarks(models.Model):
     bookmark_id = models.AutoField(primary_key=True)
-    person_id = models.BigIntegerField()
+    person = models.ForeignKey('SocioclipUsers')
     source = models.TextField()
     type = models.CharField(max_length=10)
     permalink = models.TextField()
@@ -51,7 +52,7 @@ class SocioclipBookmarks(models.Model):
     tag_list = models.ForeignKey('SocioclipTagLists', blank=True, null=True)
 
     def __unicode__(self):
-        return u'%s %s' % (self.bookmark_id,self.person_id)
+        return u'%s %s' % (self.bookmark_id,self.person)     
 
     class Meta:
         managed = False
@@ -66,7 +67,7 @@ class SocioclipFolders(models.Model):
     created_by = models.BigIntegerField(blank=True, null=True)
 
     def __unicode__(self):
-        return u'%s %s' % (self.folder_id,self.folder_name)    
+        return u'%s %s' % (self.folder_id,self.folder_name)         
 
     class Meta:
         managed = False
@@ -81,7 +82,7 @@ class SocioclipTagLists(models.Model):
     creation_date = models.DateTimeField()
 
     def __unicode__(self):
-        return u'%s %s' % (self.tag_list_id,self.tag_list_name)      
+        return u'%s %s' % (self.tag_list_id,self.tag_list_name)          
 
     class Meta:
         managed = False
@@ -94,7 +95,7 @@ class SocioclipTags(models.Model):
     category = models.CharField(max_length=2)
 
     def __unicode__(self):
-        return u'%s %s' % (self.tag_id,self.tag_text)     
+        return u'%s %s' % (self.tag_id,self.tag_text)        
 
     class Meta:
         managed = False
@@ -114,7 +115,7 @@ class SocioclipUsers(models.Model):
     type = models.CharField(db_column='Type', max_length=1)  # Field name made lowercase.
 
     def __unicode__(self):
-        return u'%s %s' % (self.person_id,self.email)        
+        return u'%s %s' % (self.person_id,self.email)      
 
     class Meta:
         managed = False
