@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Welcome to Socioclip</title>
+
+    <!-- Bootstrap core CSS -->
+    {% load staticfiles %}
+    <link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
+    <link rel="stylesheet" href="{% static "css/custom.css" %}">
+  </head>
+<!-- NAVBAR
+================================================== -->
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#socioclip-navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#"><img src="{% static "images/logo.png" %}"></a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="socioclip-navbar">
+          <ul class="nav navbar-nav navbar-right">
+            <li class="navbar-text"><a class="navbar-link" href="#"> <font size="4">About Us</font> </a></li>
+            <li class="navbar-text"><a class="navbar-link" href="#"> <font size="4">Contact</font> </a></li>            
+            <li class="navbar-text"><a class="navbar-link" href="#" data-toggle="modal" data-target="#signUpModal"> <font size="4">Sign Up</font> </a></li>            
+            <li class="navbar-text"><a class="navbar-link" href="#" data-toggle="modal" data-target="#loginModal"> <font size="4">Sign In</font> </a></li>            
+          </ul>
+        </div><!-- /.navbar-collapse -->
+      </div><!-- /.container-fluid -->
+    </nav>
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h3 class="modal-title" id="loginModalLabel">Login</h3>
+          </div>
+          <form id="login_form" onsubmit="before_login()" action="/login/" method="post">{% csrf_token %}
+            <div class="modal-body">
+                <div class="input-group">
+                  <span class="input-group-addon" id="sizing-addon2">@</span>
+                  <input type="text" name="emailid" id="emailid" class="form-control" placeholder="Username" aria-describedby="sizing-addon2">
+                </div>
+                <br>              
+                <div class="form-group">
+                  <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+                </div>
+                <a href="#">Forget Password ?</a>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-success">Login</button>
+            </div>
+          </form>          
+        </div>
+      </div>
+    </div>
+
+    <!-- Sign Up Modal -->
+    <div class="modal fade" id="signUpModal" tabindex="-1" role="dialog" aria-labelledby="signUpModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h3 class="modal-title" id="signUpModalLabel">Sign Up</h3>
+          </div>
+          <form id="signup_form" onsubmit="before_signup()" action="/signup/" method="post">{% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                  <input type="text" name="s_name" id="s_name" class="form-control" placeholder="Username" aria-describedby="sizing-addon2">
+                </div>
+                <div class="input-group">
+                  <span class="input-group-addon" id="sizing-addon2">@</span>
+                  <input type="text" name="s_emailid" id="s_emailid" class="form-control" placeholder="Email Id" aria-describedby="sizing-addon2">
+                </div>
+                <br>
+                <div class="form-group">
+                  <input type="password" class="form-control" name="s_password" id="s_password" placeholder="Password">
+                </div>
+                <div class="form-group">
+                  <input type="password" class="form-control" name="s_repassword" id="s_repassword" placeholder="Re-Type Password">
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-success">Sign Up</button>
+            </div>
+          </form>      
+        </div>
+      </div>
+    </div>
+    <div class="container-fluid" style="padding-top: 50px; padding-left:0px; padding-right:0px; min-width: 100%;">
+      <div class="row">
+          <div class="col-md-12">
+              <img src="{% static "images/bg2.jpg" %}" class="img-responsive" alt="Socioclip">
+            </div>
+        </div>        
+    </div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="{% static "js/jquery-2.1.3.min.js" %}"></script>
+    <script src="{% static "js/bootstrap.min.js" %}"></script>
+    <script src="{% static "js/sha256.js" %}"></script>
+    <!-- <script src="../../assets/js/docs.min.js"></script> -->
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script> -->
+    <script type="text/javascript">
+
+		function before_login(){
+			var pas = document.getElementById('password');
+			var email = document.getElementById('emailid');
+			pas.value = CryptoJS.SHA256(email.value + pas.value);
+		}
+
+		function before_signup(){
+			var pas = document.getElementById('s_password');
+			var email = document.getElementById('s_emailid');
+			pas.value = CryptoJS.SHA256(email.value + pas.value);
+			alert(pas.value)
+		}
+
+	</script>	
+  </body>
+</html>

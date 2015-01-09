@@ -1,0 +1,41 @@
+<html>
+<head>
+	<title>Login Page</title>
+	{% load staticfiles %}
+	<script src="{% static "js/sha256.js" %}"></script>
+	<script src="{% static "js/jquery-2.1.3.min.js" %}"></script>
+	<script src="{% static "js/bootstrap.min.js" %}"></script>
+	<link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
+	<script type="text/javascript">
+
+		function before_login(){
+			var pas = document.getElementById('password');
+			var email = document.getElementById('emailid');
+			pas.value = CryptoJS.SHA256(email.value + pas.value);
+		}
+
+		function before_signup(){
+			var pas = document.getElementById('s_password');
+			var email = document.getElementById('s_emailid');
+			pas.value = CryptoJS.SHA256(email.value + pas.value);
+			alert(pas.value)
+		}
+
+	</script>	
+</head>
+<body>
+	{{ result_val }}
+	<form id="login_form" onsubmit="before_login()" action="/login/" method="post">{% csrf_token %}
+        Email Id: <input type="text" name="emailid" id="emailid"><br>
+        Password: <input type="password" name="password" id="password"><br>
+        <input type="submit" value="Login">
+    </form>
+    <form id="signup_form" onsubmit="before_signup()" action="/signup/" method="post">{% csrf_token %}
+    	Name: <input type="text" name="s_name" id="s_name"><br>
+        Email Id: <input type="text" name="s_emailid" id="s_emailid"><br>
+        Password: <input type="password" name="s_password" id="s_password"><br>
+        Re-Type Password:<input type="password" name="s_repassword" id="s_repassword"><br>
+        <input type="submit" value="Sign up">
+    </form>
+</body>
+</html>

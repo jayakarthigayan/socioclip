@@ -1,0 +1,12 @@
+<ul>
+	{% for folder in folder_lists %}		
+		<li> {% with folder_req=folder.folder_id|stringformat:"s" %}
+			<a href={{ "/viewarchive/" | add:folder_req | add:"/" }} > {% endwith %} 
+				{{folder.folder_name}}
+			</a> 
+			<button class="archive_folder" onclick="get_subfolder(this)" id={{ folder.folder_id | slugify | add:"_expand"}} type="button">Expand</button> 
+			<br>
+			<div id={{ folder.folder_id | slugify | add:"_expand_folder"}}></div>									
+		</li>
+	{% endfor %}
+</ul>

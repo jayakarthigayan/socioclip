@@ -35,9 +35,9 @@ INSTALLED_APPS = (
     #'django.contrib.admin',
     #'django.contrib.auth',
     #'django.contrib.contenttypes',
-    #'django.contrib.sessions',
+    'django.contrib.sessions',
     #'django.contrib.messages',
-    #'django.contrib.staticfiles',
+    'django.contrib.staticfiles',
     'socioclip',
 )
 
@@ -64,8 +64,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'socioclip',
-        'USER': 'apps',
-        'PASSWORD': 'apps',
+        'USER': 'root',
+        'PASSWORD': 'starcity',
         'HOST': '127.0.0.1',
         'PORT': '3306',
     }
@@ -89,3 +89,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
+
+TEMPLATE_DIRS = (
+    '/home/jaykay/Development Tools/socioclip_com/templates',
+)
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+CSRF_COOKIE_NAME= "socioclip_csrftoken"

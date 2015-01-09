@@ -1,0 +1,151 @@
+<html>
+	<head>
+		{% load staticfiles %}
+		<script src="{% static "js/jquery-2.1.3.min.js" %}"></script>
+		<title>
+			Welcome to Socioclip
+		</title>
+		<script>
+			$(document).ready(function(){
+			  $("#create_folder").click(function(){
+			    $.ajax({
+				    type: "POST",
+				    url: "/createfolder/",
+				    data: $("#folder-form").serialize(),
+				    success: function(data) {
+				      alert(data);
+				    }
+			  	});
+			  });
+			  $("#move_bookmark").click(function(){
+			    $.ajax({
+				    type: "POST",
+				    url: "/movebookmark/",
+				    data: $("#move-form").serialize(),
+				    success: function(data) {
+				      alert(data);
+				    }
+			  	});
+			  });			  
+			});
+			function get_subfolder(obj)
+			{
+				var form_id = "#" + obj.id + "_form";
+   				 var div_id = "#" +obj.id+'_folder';
+   				 var form_data = $("#subfolder_form").serialize() + "&p_folder_id=" + obj.id;
+   				 $.ajax({
+				    type: "POST",
+				    url: "/subfolders/",
+				    data: form_data,
+				    success: function(data) {
+				      $(div_id).html(data);
+				    }
+			  	});
+			}
+		</script>
+	</head>
+	<body>
+		{{ result_val }}  <CENTER> Clips Left: {{clip_count}} </CENTER>
+		<br>
+		<a href="/logout/">Logout</a>
+		<br>
+		{% ifequal page_mode 'archive' %}
+			<a href="/home/">Go Home</a>			
+		{% else %}
+			<a href="/viewarchive/">View Archive Bookmarks</a>
+		{% endifequal %}
+		<br>
+		<br>
+		{% ifequal page_mode 'archive' %}
+			<div>
+				Create Folders
+				<hr>
+				<form action="/createfolder/" method="post" id="folder-form">{% csrf_token %}
+					New Folder Name:<input type='text' name='new_folder_name'><br>
+					Parent Folder Id:<input type='text' name='parent_folder_id'><br>
+					<input type='button' id='create_folder' value="Create Folder">
+				</form>
+			</div>			
+			<br>
+		{% endifequal %}			
+		<div>
+			{% ifequal page_mode 'archive' %}
+				Move Bookmark
+			{% else %}
+				Pin Bookmark
+			{% endifequal %}
+			<hr>
+			<form action="/movebookmark/" method="post" id="move-form">{% csrf_token %}
+				Bookmark id:<input type='text' name='bookmark_id'><br>
+				Folder Id:<input type='text' name='folder_id'><br>
+				{% ifequal page_mode 'archive' %}
+					<input type='button' id='move_bookmark' value="Move Bookmark">
+				{% else %}
+					<input type='button' id='move_bookmark' value="Pin Bookmark">
+				{% endifequal %}				
+			</form>
+		</div>
+		<br>
+		<ul>
+		<form action="/subfolders/" method="post" id="subfolder_form">{% csrf_token %}
+		{% ifequal page_mode 'archive' %}			
+			{% for folder in top_folder_list %}				
+			<li>
+				 {% with folder_req=folder.folder_id|stringformat:"s" %}
+					<a href={{ "/viewarchive/" | add:folder_req | add:"/" }} > {% endwith %}
+						{{folder.folder_name}}
+					</a> 
+					<button class="archive_folder" onclick="get_subfolder(this)" id ={{ folder.folder_id | slugify | add:"_expand"}} type="button">Expand</button>					
+				<br>
+				<div id={{ folder.folder_id | slugify | add:"_expand_folder"}}></div>
+			</li>
+			{% endfor%}
+		{% else %}
+			{% for folder in top_folder_list %}				
+				<li><a href={{ folder.folder_id }} > {{folder.folder_name}}</a>
+				</li>
+			{% endfor%}
+		{% endifequal %}			
+		</form>
+		</ul>
+		<br>	
+		<table border="1">
+			<th>bookmark_id</th>
+			<th>source</th>
+			<th>type</th>
+			<th>permalink</th>
+			<th>postby</th>
+			<th>thumbnail</th>
+			<th>description</th>
+			<th>bookmark_date</th>
+			<th>tags</th>
+			{% ifequal page_mode 'home' %}
+				<th>archive</th>
+			{% endifequal %}					
+			{% for item in bookmark_data %}
+				<tr>
+					<td>{{item.bookmark.bookmark_id}}</td>			
+				<td>{{item.bookmark.source}}</td>			
+				<td>{{item.bookmark.type}}</td>			
+				<td>{{item.bookmark.permalink}}</td>			
+				<td>{{item.bookmark.postby}}</td>			
+				<td>{{item.bookmark.thumbnail}}</td>			
+				<td>{{item.bookmark.description}}</td>			
+				<td>{{item.bookmark.bookmark_date}}</td>			
+				<td>
+					{% for tag in item.tag %}
+						{{ tag.tag_text| add:", " }}
+					{% endfor %}
+				</td>
+				{% ifequal page_mode 'home' %}
+				<td>
+					<form action="/archive/" method="post">{% csrf_token %}
+						<input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+						<input type="submit" value="archive">
+					</form>
+				</td>
+				{% endifequal %}
+			{% endfor %}
+		</table>
+	</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Welcome to Socioclip</title>
+
+    <!-- Bootstrap core CSS -->
+    {% load staticfiles %}
+    <link rel="stylesheet" href="{% static "css/bootstrap.min.css" %}">
+    <link rel="stylesheet" href="{% static "css/custom.css" %}">
+  </head>
+<!-- NAVBAR
+================================================== -->
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#socioclip-navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#"><img src="{% static "images/logo.png" %}"></a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div id="socioclip-navbar" class="navbar-collapse collapse" >
+          <ul class="nav navbar-nav navbar-right">
+          	<li class="navbar-text">
+          		<form class="navbar-form navbar-right">
+            		<input type="text" class="form-control" placeholder="Search...">
+          		</form>
+          	</li>
+          	<li class="dropdown navbar-text" style="margin-right: 2px;">
+            	<a href="#" class="dropdown-toggle navbar-text" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true"> 
+  				    Menu
+  				    <span class="caret"></span>
+      				</a>		  
+      				<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+      					<li role="presentation"><a role="menuitem" tabindex="-1" href="/viewarchive/">Archive</a></li>
+      					<li role="presentation"><a role="menuitem" tabindex="-1" href="#">Pinned Bookmarks</a></li>
+      					<li role="presentation"><a role="menuitem" tabindex="-1" href="#">Get More Clips</a></li>
+      				</ul>
+              </li>
+            	<li class="navbar-text"><a href="/home/" title="Home">Home</a></li>
+              <li class="navbar-text"><a href="#" title="Settings">Settings</a></li>
+              <li class="navbar-text"><a href="#" title="Profile">Profile</a></li>
+              <li class="navbar-text"><a href="#" title="Help">Help</a></li>
+              <li class="navbar-text"><a href="/logout/" title="Logout">Logout</a></li>
+            </ul>          
+        </div>
+      </div><!-- /.container-fluid -->
+    </nav>
+    <div id="main-body" class="container-fluid" style="padding-top: 50px;">
+      <div class="bubble-alert" id="bubble-alert-success">
+          <span id="alert-success">Hello world callback</span>
+      </div>      
+    	<div class="row">
+	        <div class="col-md-12 main">
+          		<h1 class="page-header">
+                {% ifequal page_mode 'archive' %}
+                  Archive
+                {% else %}
+                  Home
+                {% endifequal %}
+              </h1>
+              <div class="row">
+                {% for item in bookmark_data %}
+                  <div class="col-md-2" id={{ forloop.counter | slugify | add:"_col_archive" }}>
+                    <div class="color-swatches">
+                      <div class="color-swatch gray-darker">
+                        <div class="caption">
+                          <div class="tag-hover-header">     
+                            <div class="board-pin">
+                            <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
+                          </div>
+                          </div>                        
+                          <div class="tag-hover-body">
+                            <div class="row row-pad">
+                              <div class="col-md-6">
+                                <a href="#"><span class="glyphicon glyphicon-trash" aria-hidden="true"><span class="glypad">Delete</span></span></a>
+                              </div>
+                              <div class="col-md-6">
+                                <a href={{ item.bookmark.permalink }} target="_blank"><span class="glyphicon glyphicon-link " aria-hidden="true"><span class="glypad">Link</span></span></a>
+                              </div>
+                              <div class="col-md-6">
+                                {% ifequal page_mode 'archive' %}
+                                  <form action="/archive/" method="post" id={{ forloop.counter | slugify | add:"_form_archive" }}>{% csrf_token %}
+                                    <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                  </form>                                
+                                  <a href="#" id={{ forloop.counter | slugify | add:"_a_unarchive" }} onclick="submit_archive(this);"><span class="glyphicon glyphicon-new-window" aria-hidden="true"><span class="glypad">Unarchive</span></span></a>
+                                {% else %}
+                                  <form action="/archive/" method="post" id={{ forloop.counter | slugify | add:"_form_archive" }}>{% csrf_token %}
+                                    <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                  </form>                                
+                                  <a href="#" id={{ forloop.counter | slugify | add:"_a_archive" }} onclick="submit_archive(this);"><span class="glyphicon glyphicon-briefcase" aria-hidden="true"><span class="glypad">Archive</span></span></a>
+                                {% endifequal %}                                
+                              </div>
+                              {% ifequal page_mode 'home' %}
+                                <div class="col-md-6">
+                                  <a href="#"><span class="glyphicon glyphicon-pushpin" aria-hidden="true"><span class="glypad">Pin</span></span></a>
+                                </div>              
+                              {% endifequal %}
+                              <div class="col-md-6">
+                                <a href="#"><span class="glyphicon glyphicon-edit" aria-hidden="true"><span class="glypad">Edit</span></span></a>
+                              </div>                             
+                            </div>                            
+                          </div>
+                          <div class="tag-hover-footer">
+                            {% for tag in item.tag %}
+                              {{ tag.tag_text| add:" " }}
+                            {% endfor %}
+                          </div>
+                        </div>
+                        <div class="tag-header">
+                          <div class="board-pin">
+                            <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
+                          </div>
+                          <div class="board-pin">
+                            {{item.bookmark.postby}}                          
+                          </div>
+                        </div>                        
+                          {% ifequal item.bookmark.type 'Text' %}
+                            <div class="tag-body-title">
+                             {{item.bookmark.bookmark_title}}
+                            </div>
+                          {% else %}
+                            <div class="tag-body-thumbnail">
+                              <img src={{ item.bookmark.thumbnail }}>
+                            </div>  
+                          {% endifequal %}                        
+                        <div class="tag-footer">
+                          {% for tag in item.tag %}
+                            {{ tag.tag_text| add:" " }}
+                          {% endfor %}
+                        </div>
+                      </div>                      
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+          </div>
+      </div>              
+    </div>
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="{% static "js/jquery-2.1.3.min.js" %}"></script>
+    <script src="{% static "js/bootstrap.min.js" %}"></script>
+    <script src="{% static "js/sha256.js" %}"></script>
+    <!-- <script src="../../assets/js/docs.min.js"></script> -->
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <!-- <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script> -->
+	<script>
+		$(document).ready(function(){
+		  $("#create_folder").click(function(){
+		    $.ajax({
+			    type: "POST",
+			    url: "/createfolder/",
+			    data: $("#folder-form").serialize(),
+			    success: function(data) {
+			      alert(data);
+			    }
+		  	});
+		  });
+		  $("#move_bookmark").click(function(){
+		    $.ajax({
+			    type: "POST",
+			    url: "/movebookmark/",
+			    data: $("#move-form").serialize(),
+			    success: function(data) {
+			      alert(data);
+			    }
+		  	});
+		  });
+      $("[rel='tooltip']").tooltip();    
+ 
+      $('.color-swatches').hover(
+          function(){
+              $(this).find('.caption').slideDown(250); //.fadeIn(250)
+          },
+          function(){
+              $(this).find('.caption').slideUp(250); //.fadeOut(205)
+          }
+      ); 			
+      $("#main-body").mouseup(function(e)
+      {
+        var subject = $("#bubble-alert-success"); 
+
+        if(e.target.id != subject.attr('id') && !subject.has(e.target).length)
+        {
+            subject.fadeOut();
+        }
+      });      
+		});
+		function get_subfolder(obj)
+		{
+			var form_id = "#" + obj.id + "_form";
+				 var div_id = "#" +obj.id+'_folder';
+				 var form_data = $("#subfolder_form").serialize() + "&p_folder_id=" + obj.id;
+				 $.ajax({
+			    type: "POST",
+			    url: "/subfolders/",
+			    data: form_data,
+			    success: function(data) {
+			      $(div_id).html(data);
+			    }
+		  	});
+		}
+    function submit_archive(obj)
+    {
+      var form_id = "#" + obj.id.substring(0, 1) + "_form_archive"; 
+      var div_id = "#" + obj.id.substring(0, 1) +'_col_archive';
+      $.ajax({
+        type: "POST",
+        url: "/archive/",
+        data: $(form_id).serialize(),
+        success: function(data) {
+          if ( data == "1" ){
+            $( div_id ).remove();
+            $("#alert-success").html("Archived Successfully.")
+            $("#bubble-alert-success").show();
+          }            
+          else{
+            alert('Archive Failed');
+          }
+        }
+      });
+    }
+	</script>	
+  </body>
+</html>
