@@ -55,14 +55,7 @@
       				</a>		  
       				<ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
       					<li role="presentation"><a role="menuitem" tabindex="-1" href="/viewarchive/">Archive</a></li>
-                <li role="presentation">
-                  <form action="/viewfoldercont/" method="post" id="form_pin_view">{% csrf_token %}
-                      <input type="hidden" name="folder_id" value={{ pinned_folder_id }}>
-                  </form>
-                  <a role="menuitem" tabindex="-1" href="#" onclick="document.getElementById('form_pin_view').submit();">
-                  Pinned Bookmarks
-                  </a>
-                </li>
+      					<li role="presentation"><a role="menuitem" tabindex="-1" href="#">Pinned Bookmarks</a></li>
       					<li role="presentation"><a role="menuitem" tabindex="-1" href="#">Get More Clips</a></li>
       				</ul>
               </li>
@@ -116,11 +109,24 @@
     	<div class="row">
 	        <div class="col-md-12 main">
           		<h1 class="page-header">
-                {{ page_title }}
+                Search Result
+                {% if search_keyword %}
+                  - <small>"{{ search_keyword }}"</small>
+                {% endif %}
               </h1>
-              <div class="row">
-                {% for item in bookmark_data %}
-                  <div class="col-md-2" id={{ forloop.counter | slugify | add:"_col_bookmark" }}>
+              {% if bookmark_data.home_search_result %}
+                <div class="row">
+                  <div class="col-md-12">
+                    <h3 class="sub-header">
+                      Home Bookmarks
+                    </h3>
+                  </div>
+                </div>
+              {% endif %}
+              {% if bookmark_data.home_search_result %}
+              <div class="row">                
+                {% for item in bookmark_data.home_search_result %}
+                  <div class="col-md-2" id={{ forloop.counter | slugify | add:"_col_bookmark_home" }}>
                     <div class="color-swatches">
                       <div class="color-swatch gray-darker">
                         <div class="caption">
@@ -128,7 +134,7 @@
                             <div class="board-pin">
                               <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
                             </div>
-                            <div class="tag-hover-desc" id={{ forloop.counter | slugify | add:"_col_desc" }}>
+                            <div class="tag-hover-desc" id={{ forloop.counter | slugify | add:"_col_desc_home" }}>
                               {% if item.bookmark.description %}
                                 {{item.bookmark.description}}
                               {% endif %}
@@ -140,41 +146,32 @@
                                 <form action="/deletebookmark/" method="post" id={{ forloop.counter | slugify | add:"_form_delete" }}>{% csrf_token %}
                                   <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
                                 </form>
-                                <a href="#" id={{ forloop.counter | slugify | add:"_a_delete" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-trash" aria-hidden="true"><span class="glypad">Delete</span></span></a>
+                                <a href="#" id={{ forloop.counter | slugify | add:"_a_delete_home" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-trash" aria-hidden="true"><span class="glypad">Delete</span></span></a>
                               </div>
                               <div class="col-md-6">
                                 <a href={{ item.bookmark.permalink }} target="_blank"><span class="glyphicon glyphicon-link " aria-hidden="true"><span class="glypad">Link</span></span></a>
                               </div>
                               <div class="col-md-6">
-                                {% if page_mode == 'home' or page_mode == 'pin' %}
-                                  <form action="/archive/" method="post" id={{ forloop.counter | slugify | add:"_form_archive" }}>{% csrf_token %}
-                                    <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
-                                  </form>                                
-                                  <a href="#" id={{ forloop.counter | slugify | add:"_a_archive" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-briefcase" aria-hidden="true"><span class="glypad">Archive</span></span></a>                                  
-                                {% else %}
-                                  <form action="/unarchive/" method="post" id={{ forloop.counter | slugify | add:"_form_unarchive" }}>{% csrf_token %}
-                                    <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
-                                  </form>                                
-                                  <a href="#" id={{ forloop.counter | slugify | add:"_a_unarchive" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-new-window" aria-hidden="true"><span class="glypad">Unarchive</span></span></a>                                  
-                                {% endif %}                                
+                                <form action="/archive/" method="post" id={{ forloop.counter | slugify | add:"_form_archive_home" }}>{% csrf_token %}
+                                  <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                </form>                                
+                                <a href="#" id={{ forloop.counter | slugify | add:"_a_archive_home" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-briefcase" aria-hidden="true"><span class="glypad">Archive</span></span></a>
                               </div>
-                              {% ifequal page_mode 'home' %}
-                                <div class="col-md-6">
-                                  {% with outer_for_counter=forloop.counter %}
-                                  {% for folder in top_folder_list %}       
-                                    {% if forloop.first %}
-                                      <form action="/movebookmark/" method="post" id={{ outer_for_counter | slugify | add:"_form_pin" }}>{% csrf_token %}
-                                        <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
-                                        <input type="hidden" name="folder_id" value={{ folder.folder_id }}>
-                                      </form>
-                                    {% endif %}
-                                  {% endfor%}         
-                                  {% endwith %}                         
-                                  <a href="#" id={{ forloop.counter | slugify | add:"_a_pin" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-pushpin" aria-hidden="true"><span class="glypad">Pin</span></span></a>
-                                </div>              
-                              {% endifequal %}
                               <div class="col-md-6">
-                                <a href="#" id={{ forloop.counter | slugify | add:"_col_editb" }} data-toggle="modal" data-target="#editModal" data-bookmarkid={{ item.bookmark.bookmark_id }} data-code={{csrf_token}}><span class="glyphicon glyphicon-edit" aria-hidden="true"><span class="glypad">Edit</span></span></a>
+                                {% with outer_for_counter=forloop.counter %}
+                                {% for folder in top_folder_list %}       
+                                  {% if forloop.first %}
+                                    <form action="/movebookmark/" method="post" id={{ outer_for_counter | slugify | add:"_form_pin_home" }}>{% csrf_token %}
+                                      <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                      <input type="hidden" name="folder_id" value={{ folder.folder_id }}>
+                                    </form>
+                                  {% endif %}
+                                {% endfor%}         
+                                {% endwith %}                         
+                                <a href="#" id={{ forloop.counter | slugify | add:"_a_pin_home" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-pushpin" aria-hidden="true"><span class="glypad">Pin</span></span></a>
+                              </div>              
+                              <div class="col-md-6">
+                                <a href="#" id={{ forloop.counter | slugify | add:"_col_editb_home" }} data-toggle="modal" data-target="#editModal" data-bookmarkid={{ item.bookmark.bookmark_id }} data-code={{csrf_token}}><span class="glyphicon glyphicon-edit" aria-hidden="true"><span class="glypad">Edit</span></span></a>
                               </div>                             
                             </div>                            
                           </div>
@@ -188,7 +185,7 @@
                           <div class="board-pin">
                             <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
                           </div>
-                          <div class="board-pin" id={{ forloop.counter | slugify | add:"_col_postby" }}>
+                          <div class="board-pin" id={{ forloop.counter | slugify | add:"_col_postby_home" }}>
                             {{item.bookmark.postby}}                          
                           </div>
                         </div>                        
@@ -201,7 +198,7 @@
                               <img src={{ item.bookmark.thumbnail }}>
                             </div>  
                           {% endifequal %}                        
-                        <div class="tag-footer" id={{ forloop.counter | slugify | add:"_col_tags" }}>
+                        <div class="tag-footer" id={{ forloop.counter | slugify | add:"_col_tags_home" }}>
                           {% for tag in item.tag %}
                             {{ tag.tag_text| add:" " }}
                           {% endfor %}
@@ -211,6 +208,101 @@
                   </div>
                 {% endfor %}
               </div>
+              {% endif %}
+              {% if bookmark_data.home_search_result and bookmark_data.archived_search_result %}
+                <hr>              
+              {% endif %}
+              {% if bookmark_data.archived_search_result %}
+                <div class="row">
+                  <div class="col-md-12">
+                    <h3 class="sub-header">
+                      Archived Bookmarks
+                    </h3>
+                  </div>
+                </div>
+              {% endif %}
+              {% if bookmark_data.archived_search_result %}
+              <div class="row">                
+                {% for item in bookmark_data.archived_search_result %}
+                  <div class="col-md-2" id={{ forloop.counter | slugify | add:"_col_bookmark_archive" }}>
+                    <div class="color-swatches">
+                      <div class="color-swatch gray-darker">
+                        <div class="caption">
+                          <div class="tag-hover-header">     
+                            <div class="board-pin">
+                              <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
+                            </div>
+                            <div class="tag-hover-desc" id={{ forloop.counter | slugify | add:"_col_desc_archive" }}>
+                              {% if item.bookmark.description %}
+                                {{item.bookmark.description}}
+                              {% endif %}
+                            </div>
+                          </div>                        
+                          <div class="tag-hover-body">
+                            <div class="row row-pad">
+                              <div class="col-md-6">
+                                <form action="/deletebookmark/" method="post" id={{ forloop.counter | slugify | add:"_form_delete_archive" }}>{% csrf_token %}
+                                  <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                </form>
+                                <a href="#" id={{ forloop.counter | slugify | add:"_a_delete_archive" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-trash" aria-hidden="true"><span class="glypad">Delete</span></span></a>
+                              </div>
+                              <div class="col-md-6">
+                                <a href={{ item.bookmark.permalink }} target="_blank"><span class="glyphicon glyphicon-link " aria-hidden="true"><span class="glypad">Link</span></span></a>
+                              </div>
+                              <div class="col-md-6">
+                                <form action="/unarchive/" method="post" id={{ forloop.counter | slugify | add:"_form_unarchive_archive" }}>{% csrf_token %}
+                                  <input type="hidden" name="bookmark_id" value={{ item.bookmark.bookmark_id }}>
+                                </form>                                
+                                <a href="#" id={{ forloop.counter | slugify | add:"_a_unarchive_archive" }} onclick="submit_ajax(this);"><span class="glyphicon glyphicon-new-window" aria-hidden="true"><span class="glypad">Unarchive</span></span></a>                              
+                              </div>
+                              <div class="col-md-6">
+                                <a href="#" id={{ forloop.counter | slugify | add:"_col_editb_archive" }} data-toggle="modal" data-target="#editModal" data-bookmarkid={{ item.bookmark.bookmark_id }} data-code={{csrf_token}}><span class="glyphicon glyphicon-edit" aria-hidden="true"><span class="glypad">Edit</span></span></a>
+                              </div>                             
+                            </div>                            
+                          </div>
+                          <div class="tag-hover-footer">
+                            {% for tag in item.tag %}
+                              {{ tag.tag_text| add:" " }}
+                            {% endfor %}
+                          </div>
+                        </div>
+                        <div class="tag-header">
+                          <div class="board-pin">
+                            <img src={{ "http://www.google.com/s2/favicons?domain=" | add:item.bookmark.source }} title={{item.bookmark.source}}>
+                          </div>
+                          <div class="board-pin" id={{ forloop.counter | slugify | add:"_col_postby_archive" }}>
+                            {{item.bookmark.postby}}                          
+                          </div>
+                        </div>                        
+                          {% ifequal item.bookmark.type 'Text' %}
+                            <div class="tag-body-title">
+                             {{item.bookmark.bookmark_title}}
+                            </div>
+                          {% else %}
+                            <div class="tag-body-thumbnail">
+                              <img src={{ item.bookmark.thumbnail }}>
+                            </div>  
+                          {% endifequal %}                        
+                        <div class="tag-footer" id={{ forloop.counter | slugify | add:"_col_tags_archive" }}>
+                          {% for tag in item.tag %}
+                            {{ tag.tag_text| add:" " }}
+                          {% endfor %}
+                        </div>
+                      </div>                      
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% if not bookmark_data.home_search_result and not bookmark_data.archived_search_result %}
+                <div class="row">
+                  <div class="col-md-12">
+                    <h3 class="sub-header">
+                      No Search Result.
+                    </h3>
+                  </div>
+                </div>
+              {% endif %}
           </div>
       </div>              
     </div>
@@ -225,26 +317,6 @@
     <!-- <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script> -->
 	<script>
 		$(document).ready(function(){
-		  $("#create_folder").click(function(){
-		    $.ajax({
-			    type: "POST",
-			    url: "/createfolder/",
-			    data: $("#folder-form").serialize(),
-			    success: function(data) {
-			      alert(data);
-			    }
-		  	});
-		  });
-		  $("#move_bookmark").click(function(){
-		    $.ajax({
-			    type: "POST",
-			    url: "/movebookmark/",
-			    data: $("#move-form").serialize(),
-			    success: function(data) {
-			      alert(data);
-			    }
-		  	});
-		  });
       $("#edit-form-submit").click(function(){
         $.ajax({
           type: "POST",
@@ -253,9 +325,10 @@
           success: function(data) {
             var obj = jQuery.parseJSON( data );
             if (obj.result_code == "1"){
-              var postby_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_postby";
-              var tags_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_tags";     
-              var desc_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_desc";
+              var parts = $('#edit-col-id').val().split('_');
+              var postby_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_postby_" + parts[3];
+              var tags_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_tags_" + parts[3];     
+              var desc_id = "#" + $('#edit-col-id').val().substring(0, 1) + "_col_desc_" + parts[3];
               $(postby_id).html(obj.postby);
               $(tags_id).html(obj.tag_list.replace(",", " ") );
               $(desc_id).html(obj.description);
@@ -322,8 +395,8 @@
     function submit_ajax(obj)
     {
       var parts = obj.id.split('_');
-      var form_id = "#" + obj.id.substring(0, 1) + "_form_" + parts[2]; 
-      var div_id = "#" + obj.id.substring(0, 1) +'_col_bookmark';
+      var form_id = "#" + obj.id.substring(0, 1) + "_form_" + parts[2]+ "_" + part[3]; 
+      var div_id = "#" + obj.id.substring(0, 1) +'_col_bookmark_'+ part[3];
       $.ajax({
         type: "POST",
         url: $(form_id).attr('action'),

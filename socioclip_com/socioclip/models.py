@@ -131,7 +131,7 @@ def dictfetchall(cursor):
         for row in cursor.fetchall()
     ]
 
-def fetch_home_page_data(emailid,archive_flag, folder_id):
+def fetch_page_data(emailid,archive_flag, folder_id):
     cursor = connection.cursor()
 
     cursor.execute("select sbtt.*,st.* from \
@@ -174,3 +174,59 @@ def fetch_home_page_data(emailid,archive_flag, folder_id):
     cursor.close()
 
     return proper_rows           
+
+def fetch_search_page_data(emailid,search_text):
+    search_text = "%"+search_text+"%"
+    cursor = connection.cursor()
+
+    cursor.execute("select sbtt.*,st.* from \
+    socioclip_users su, \
+    (select sb.*,sbt.tag_id as b_tag_id \
+    from socioclip_bookmarks sb left join socioclip_bookmark_tags sbt on sb.bookmark_id = sbt.bookmark_id) sbtt \
+    left join socioclip_tags st on sbtt.b_tag_id = st.tag_id \
+    where su.email = %s \
+    and su.person_id = sbtt.person_id  \
+    and (sbtt.postby like %s \
+    or st.tag_text like %s \
+    or sbtt.description like %s \
+    or sbtt.Title like %s ) \
+    order by bookmark_date desc, sbtt.bookmark_id", [emailid,search_text,search_text,search_text,search_text])
+
+    rows = dictfetchall(cursor)
+
+    proper_rows = []
+    archive_proper_rows = []
+    temp_bookmark_tag = {}
+    temp_bookmark_id = -1
+    count = 1
+    temp_archive_flag = -1;
+
+    for row in rows:      
+        if temp_bookmark_id != row['bookmark_id']:
+            if temp_bookmark_tag and temp_archive_flag == 0:
+                proper_rows.append(temp_bookmark_tag)
+            elif temp_bookmark_tag and temp_archive_flag == 1:
+                archive_proper_rows.append(temp_bookmark_tag)
+            temp_bookmark_tag = {}
+            temp_archive_flag = row['archived'];
+            l_postby = row['postby']
+            l_postby = (l_postby[:18] + '..') if len(l_postby) > 20 else l_postby
+            temp_bookmark = {'bookmark_id':row['bookmark_id'], 'source' : row['source'], 'type' : row['type'], 
+            'permalink':row['permalink'], 'postby':l_postby, 'thumbnail':row['thumbnail'], 
+            'description':row['description'], 'bookmark_date':row['bookmark_date'], 'bookmark_title':row['Title'], 'archive_flag':row['archived']}
+            temp_bookmark_id = row['bookmark_id']
+            temp_tag = {'tag_id':row['tag_id'], 'tag_text':row['tag_text'], 'category':row['category']}
+            temp_tag_list = [temp_tag]
+            temp_bookmark_tag = {'bookmark':temp_bookmark,'tag':temp_tag_list}
+        else:
+            temp_tag = {'tag_id':row['tag_id'], 'tag_text':row['tag_text'], 'category':row['category']}
+            temp_bookmark_tag['tag'].append(temp_tag)
+    if temp_bookmark_id != -1 and temp_archive_flag == 0:        
+        proper_rows.append(temp_bookmark_tag)
+    elif temp_bookmark_id != -1 and temp_archive_flag == 1:
+        archive_proper_rows.append(temp_bookmark_tag)
+    cursor.close()
+
+    search_result = {"home_search_result":proper_rows, "archived_search_result":archive_proper_rows}
+
+    return search_result 

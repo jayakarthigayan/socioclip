@@ -1,7 +1,8 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from django.core.context_processors import csrf
-from socioclip.models import SocioclipUsers, SocioclipBookmarks, fetch_home_page_data, SocioclipFolders, SocioclipTags, SocioclipBookmarkTags
+from django.core import serializers
+from socioclip.models import SocioclipUsers, SocioclipBookmarks, fetch_page_data, SocioclipFolders, SocioclipTags, SocioclipBookmarkTags, fetch_search_page_data
 from django.core.exceptions import ObjectDoesNotExist
 from django.template.loader import get_template
 from django.template import Context
@@ -9,6 +10,7 @@ from django.middleware.csrf import get_token
 from urlparse import urlparse
 import bcrypt
 import hashlib
+import json
 
 # Import smtplib for the actual sending function
 import smtplib
@@ -27,7 +29,6 @@ def index(request):
 
 def createcookie(request):
 	csrf_token = get_token(request)
-	print csrf_token
 	return HttpResponse('created')
 
 # View function to handle the login process
@@ -61,20 +62,19 @@ def login(request):
 			return render(request, 'login.html', {'result_val':'Login Failed'})		
 	return render(request, 'login.html', {'result_val':'Login Failed'})
 
-
 # View function to load the home page after successful login
 def home(request):
 	emailid = request.session.get('scan_me','error')
 	name = ''	
-	print request.method
 	if emailid != 'error':
 		try:
 			user = SocioclipUsers.objects.select_related().get(email = emailid)
 			name = user.name
-			rows = fetch_home_page_data(emailid,0,None)
+			rows = fetch_page_data(emailid,0,None)
 			folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
+			folder_pinned = SocioclipFolders.objects.get(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
 			if user.type == 'P':
-				return render(request, 'home_user.html', {'result_val':'Welcome '+name,'bookmark_data':rows, 'clip_count':user.clips_left, 'page_mode':'home', 'top_folder_list':folder_list})
+				return render(request, 'home_user.html', {'pinned_folder_id':folder_pinned.folder_id,'result_val':'Welcome '+name,'bookmark_data':rows, 'clip_count':user.clips_left, 'page_mode':'home', 'top_folder_list':folder_list,"page_title":"Home"})
 		except ObjectDoesNotExist:
 			return render(request, 'login.html', {'result_val':'Serious error happened.Sorry!'})
 	else:
@@ -116,10 +116,12 @@ def viewarchive(request):
 		try:
 			user = SocioclipUsers.objects.select_related().get(email = emailid)
 			name = user.name
-			rows = fetch_home_page_data(emailid,1,None)
-			folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None).exclude(folder_name = 'pinned').order_by("folder_name")
+			rows = fetch_page_data(emailid,1,None)
+			folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
+			folder_pinned = SocioclipFolders.objects.get(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')			
+			# folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None).exclude(folder_name = 'pinned').order_by("folder_name")
 			if user.type == 'P':
-				return render(request, 'home_user.html', {'result_val':'Welcome '+name,'bookmark_data':rows, 'clip_count':user.clips_left, 'page_mode':'archive', 'top_folder_list':folder_list})
+				return render(request, 'home_user.html', {'pinned_folder_id':folder_pinned.folder_id,'result_val':'Welcome '+name,'bookmark_data':rows, 'clip_count':user.clips_left, 'page_mode':'archive', 'top_folder_list':folder_list,"page_title":"Archived"})
 		except ObjectDoesNotExist:
 			return render(request, 'login.html', {'result_val':'Serious error happened.Sorry!'})
 	return render(request, 'login.html', {'result_val':'Some unhandled exception occurred. Sorry!'})
@@ -158,25 +160,17 @@ def createfolder(request):
 	return HttpResponse('Folder "'+ p_new_folder_name +'" created successfully')
 
 # View function to display the bookmarks within a folder.
-def viewfoldercont(request,url,folder_id):
+def viewfoldercont(request):
 	emailid = request.session.get('scan_me','error')		
 	if emailid != 'error':
 		try:
-			p_folder_id = int(folder_id)			
+			p_folder_id = request.POST.get('folder_id')
 			user = SocioclipUsers.objects.select_related().get(email = emailid)
 			name = user.name
 			row = []
-			if url == 'home':
-				rows = fetch_home_page_data(emailid,0,p_folder_id)
-				folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
-			else:
-				rows = fetch_home_page_data(emailid,1,p_folder_id)
-				folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None).order_by("folder_name")			
-			if user.type == 'P':
-				page_mode = 'archive'
-				if url == 'home':
-					page_mode = 'home'
-				return render(request, 'home_user.html', {'result_val':'Welcome '+name,'bookmark_data':rows, 'page_mode':page_mode, 'top_folder_list':folder_list})			
+			rows = fetch_page_data(emailid,0,p_folder_id)
+			folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
+			return render(request, 'home_user.html', {'result_val':'Welcome '+name,'bookmark_data':rows, 'page_mode':"pin", 'top_folder_list':folder_list,"page_title":"Pinned Bookmarks"})			
 		except ValueError:
 			return render(request, 'login.html', {'result_val':'Serious error happened.Sorry!'})			
 		except ObjectDoesNotExist:
@@ -203,12 +197,12 @@ def movebookmark(request):
 					assign_folder = SocioclipFolders.objects.get(folder_id = p_folder_id)
 					bookmark_move.folder = assign_folder
 					bookmark_move.save()
-					return HttpResponse('Bookmark "'+ p_bookmark_id +'" moved successfully')
+					return HttpResponse('1')
 				else:
-					return HttpResponse('Move Bookmark failed. Folder id doesn''t exists')						
+					return HttpResponse('-1')						
 			except ObjectDoesNotExist:
-				return redirect('/archive/',{'result_val':'Error ', 'page_mode':'archive'})
-	return HttpResponse('Move Bookmark failed. Due to some unknown error')
+				return HttpResponse('-1')
+	return HttpResponse('-2')
 
 # View function to check whether the email id already exists
 def check_user_email(request):
@@ -290,47 +284,180 @@ def createbookmark(request):
 			p_perm_link = request.POST.get('p_perm_link')
 			p_tags = request.POST.get('p_tags')
 			p_post_by = request.POST.get('p_postby')
-			print "p_emailid", p_emailid
-			print "p_title", p_title
-			print "p_thumbnail", p_thumbnail
-			print "p_desc", p_desc
-			print "p_perm_link", p_perm_link
-			print "p_post_by", p_post_by
-			print "p_tags", p_tags
-			if p_tags:
-				for tag in p_tags.split(","):
-					print tag
+			# print "p_emailid", p_emailid
+			# print "p_title", p_title
+			# print "p_thumbnail", p_thumbnail
+			# print "p_desc", p_desc
+			# print "p_perm_link", p_perm_link
+			# print "p_post_by", p_post_by
+			# print "p_tags", p_tags
+			# if p_tags:
+			# 	for tag in p_tags.split(","):
+			# 		print tag
 			if p_emailid:
 				try:
 					user = SocioclipUsers.objects.select_related().get(email = p_emailid)
-					bookmark = SocioclipBookmarks()
-					bookmark.person = user
-					if p_perm_link:
-						bookmark.permalink = p_perm_link
+					if user.clips_left > 0:
+						bookmark = SocioclipBookmarks()
+						bookmark.person = user
+						if p_perm_link:
+							bookmark.permalink = p_perm_link
+						else:
+							return HttpResponse('Link cannot be empty')		
+						if p_thumbnail or p_title:
+							if p_thumbnail:
+								bookmark.thumbnail = p_thumbnail
+								bookmark.type = 'Photo'
+							if p_title:
+								bookmark.title = p_title
+								bookmark.type = 'Text'
+						else:
+							return HttpResponse('Both Thumbnail and Title cannot be empty')			
+						if p_post_by:
+							bookmark.postby = p_post_by
+						if p_desc:
+							bookmark.description = p_desc		
+						parsed_uri = urlparse( p_perm_link )
+						source = '{uri.netloc}'.format(uri=parsed_uri)
+						if source:
+							bookmark.source = source
+						bookmark.folder = None
+						bookmark.tag_list = None
+						bookmark.save()
+						if p_tags:
+							for tag in p_tags.split(","):
+								tag = tag.replace(' ','')
+								tag = tag.upper()
+								try:
+									tag_obj = SocioclipTags.objects.get(tag_text = tag)
+									bookmark_tag = SocioclipBookmarkTags(bookmark = bookmark, tag = tag_obj)
+									bookmark_tag.save()
+								except ObjectDoesNotExist:
+									tag_obj = SocioclipTags(tag_text = tag)
+									tag_obj.save()
+									tag_obj = SocioclipTags.objects.get(tag_text = tag)
+									bookmark_tag = SocioclipBookmarkTags(bookmark = bookmark, tag = tag_obj)
+									bookmark_tag.save()
+						return HttpResponse('Bookmark created successfully')
 					else:
-						return HttpResponse('Link cannot be empty')		
-					if p_thumbnail or p_title:
-						if p_thumbnail:
-							bookmark.thumbnail = p_thumbnail
-							bookmark.type = 'Photo'
-						if p_title:
-							bookmark.title = p_title
-							bookmark.type = 'Text'
+						return HttpResponse('Clip count exceeded')
+				except ObjectDoesNotExist:
+					return HttpResponse('Invalid User Error')		
+			else:
+				return HttpResponse('Email id not valid')			
+			return HttpResponse('Fatal Error while creating bookmark')
+		else:
+			return HttpResponse('Not an authorized request')
+	except Exception,e:
+		print str(e)
+		return HttpResponse('-3')
+
+# View function to handle the unarchive functionality
+def unarchive(request):
+	emailid = request.session.get('scan_me','error')
+	if emailid != 'error' and request.method == 'POST':
+		p_bookmark_id = request.POST.get('bookmark_id')
+		try:
+			unarchive_bookmark = SocioclipBookmarks.objects.get(bookmark_id = int(p_bookmark_id))
+			unarchive_bookmark.archived = 0
+			unarchive_bookmark.save()
+		except ObjectDoesNotExist:
+			return HttpResponse('-1')	
+	return HttpResponse('1')
+
+def deletebookmark(request):
+	emailid = request.session.get('scan_me','error')
+	if emailid != 'error' and request.method == 'POST':
+		p_bookmark_id = request.POST.get('bookmark_id')
+		try:
+			delete_bookmark = SocioclipBookmarks.objects.get(bookmark_id = int(p_bookmark_id))
+			delete_bookmark.delete()
+		except ObjectDoesNotExist:
+			return HttpResponse('-1')	
+	return HttpResponse('1')
+
+def geteditdetail(request):
+	try:
+		emailid = request.session.get('scan_me','error')
+		if emailid != 'error' and request.method == 'POST':
+			p_bookmark_id = request.POST.get('bookmark_id')
+			try:
+				bookmark = SocioclipBookmarks.objects.get(bookmark_id = int(p_bookmark_id))		
+				tags = SocioclipBookmarkTags.objects.filter(bookmark_id = int(p_bookmark_id))
+				tag_list = None
+				for tag in tags:
+					if tag_list:
+						tag_list = tag_list + ',' + tag.tag.tag_text						
 					else:
-						return HttpResponse('Both Thumbnail and Title cannot be empty')			
-					if p_post_by:
-						bookmark.postby = p_post_by
-					if p_desc:
-						bookmark.description = p_desc		
-					parsed_uri = urlparse( p_perm_link )
-					source = '{uri.netloc}'.format(uri=parsed_uri)
-					if source:
-						bookmark.source = source
-					bookmark.folder = None
-					bookmark.tag_list = None
-					bookmark.save()
-					if p_tags:
-						for tag in p_tags.split(","):
+						tag_list = tag.tag.tag_text
+				tag_code = None
+				if tag_list:
+					hash_object = hashlib.sha256(tag_list)
+					tag_code = hash_object.hexdigest()
+				return_data = {'bookmark_id':bookmark.bookmark_id, 'postby': bookmark.postby, 'description':bookmark.description, 'tag_list':tag_list,'tag_code':tag_code}
+				json_format_data = 	json.dumps(return_data, ensure_ascii=False)
+				return HttpResponse(json_format_data)
+			except ObjectDoesNotExist:
+				return HttpResponse('-1')	
+		return HttpResponse('-2')		
+	except Exception,e:
+		print str(e)
+		return HttpResponse('-3')
+
+def editbookmark(request):
+	try:
+		emailid = request.session.get('scan_me','error')
+		if emailid != 'error' and request.method == 'POST':
+			p_bookmark_id = request.POST.get('bookmark_id')
+			try:
+				p_postby = request.POST.get('postby')
+				p_description = request.POST.get('description')
+				p_tags_list = request.POST.get('tags_list')
+				p_tag_codes = request.POST.get('tag_codes')
+				v_update_required = False;
+				bookmark = SocioclipBookmarks.objects.select_related().get(bookmark_id = p_bookmark_id);
+				if bookmark.postby != p_postby:
+					bookmark.postby = p_postby
+					v_update_required = True;
+				if bookmark.description != p_description:
+					bookmark.description = p_description
+					v_update_required = True;
+				if p_tags_list and p_tag_codes:
+					hash_object = hashlib.sha256(p_tags_list)
+					v_tag_code = hash_object.hexdigest()
+					if v_tag_code != p_tag_codes:
+						bookmark_tags = SocioclipBookmarkTags.objects.filter(bookmark_id = int(p_bookmark_id))
+						v_tag_list = []
+						for bookmark_tag in bookmark_tags:
+							v_tag_list.append(bookmark_tag.tag.tag_text)
+						v_tag_new_list = []
+						for tag in p_tags_list.split(","):
+							tag = tag.replace(' ','')
+							v_tag_new_list.append(tag)
+						delete_tag_list = list(set(v_tag_list) - set(v_tag_new_list))
+						new_tag_list = list(set(v_tag_new_list) - set(v_tag_list))
+						if new_tag_list:
+							for tag in new_tag_list:
+								tag = tag.upper()
+								try:
+									tag_obj = SocioclipTags.objects.get(tag_text = tag)
+									bookmark_tag = SocioclipBookmarkTags(bookmark = bookmark, tag = tag_obj)
+									bookmark_tag.save()
+								except ObjectDoesNotExist:
+									tag_obj = SocioclipTags(tag_text = tag)
+									tag_obj.save()
+									tag_obj = SocioclipTags.objects.get(tag_text = tag)
+									bookmark_tag = SocioclipBookmarkTags(bookmark = bookmark, tag = tag_obj)
+									bookmark_tag.save()
+						if delete_tag_list:
+							for tag in delete_tag_list:
+								tag = tag.upper()
+								tag_rec = SocioclipTags.objects.select_related.get(tag_text = tag)
+								SocioclipBookmarkTags.objects.get(tag = tag_rec).delete()
+				elif p_tags_list or p_tag_codes:
+					if p_tags_list:
+						for tag in p_tags_list.split(","):
+							tag = tag.replace(' ','')
 							tag = tag.upper()
 							try:
 								tag_obj = SocioclipTags.objects.get(tag_text = tag)
@@ -342,13 +469,39 @@ def createbookmark(request):
 								tag_obj = SocioclipTags.objects.get(tag_text = tag)
 								bookmark_tag = SocioclipBookmarkTags(bookmark = bookmark, tag = tag_obj)
 								bookmark_tag.save()
-					return HttpResponse('Bookmark created successfully')
-				except ObjectDoesNotExist:
-					return HttpResponse('Invalid User Error')		
-			else:
-				return HttpResponse('Email id not valid')			
-			return HttpResponse('Fatal Error while creating bookmark')
-		else:
-			return HttpResponse('Not an authorized request')
+					if p_tag_codes:
+					 	SocioclipBookmarkTags.objects.filter(bookmark_id = int(p_bookmark_id)).delete()
+				if v_update_required:
+					bookmark.save()
+				if p_tags_list:
+					p_tags_list = p_tags_list.replace(' ','')
+					p_tags_list = p_tags_list.upper()
+				p_postby = (p_postby[:18] + '..') if len(p_postby) > 20 else p_postby
+				return_data = {'result_code':'1' ,'postby': p_postby, 'description':p_description, 'tag_list':p_tags_list}
+				json_format_data = 	json.dumps(return_data, ensure_ascii=False)
+				return HttpResponse(json_format_data)
+			except ObjectDoesNotExist:
+				return HttpResponse('-1')
+		return HttpResponse('-2')		
 	except Exception,e:
 		print str(e)
+		return HttpResponse('-3')
+
+# View function to load the home page after successful login
+def search(request):
+	emailid = request.session.get('scan_me','error')
+	name = ''	
+	if emailid != 'error':
+		try:
+			user = SocioclipUsers.objects.select_related().get(email = emailid)
+			folder_list = SocioclipFolders.objects.filter(created_by = user.person_id, parent_folder_id = None, folder_name = 'pinned')
+			search_keyword = request.POST.get('search_keyword')			
+			rows = fetch_search_page_data(emailid,search_keyword)
+			print rows
+			if user.type == 'P':
+				return render(request, 'search.html', {'search_keyword': search_keyword,'bookmark_data':rows, 'clip_count':user.clips_left, 'page_mode':'search', 'top_folder_list':folder_list})
+		except ObjectDoesNotExist:
+			return render(request, 'login.html', {'result_val':'Serious error happened.Sorry!'})
+	else:
+		return render(request, 'login.html', {'result_val':'You are not authorized to view this page. Please login to continue'})
+	return render(request, 'login.html', {'result_val':'Some unhandled exception occurred. Sorry!'})
